@@ -99,8 +99,11 @@ class TestUserTokenMiddleware:
         mock_app = AsyncMock()
         # Create a mock MCP server to avoid warnings
         mock_mcp_server = MagicMock()
-        mock_mcp_server.settings.streamable_http_path = "/mcp"
-        return UserTokenMiddleware(mock_app, mcp_server_ref=mock_mcp_server)
+        # mock_mcp_server.settings.streamable_http_path = "/mcp"
+        return UserTokenMiddleware(mock_app,
+            jwks_uri="https://example.com/.well-known/jwks.json",
+            issuer="https://example.com",
+            audience="test-audience")
 
     @pytest.fixture
     def mock_request(self):
