@@ -215,14 +215,14 @@ token_validation_cache: TTLCache[
 
 
 
-main_mcp = AtlassianMCP(name="Atlassian MCP", lifespan=main_lifespan)
+main_mcp = AtlassianMCP(name="Atlassian MCP", lifespan=main_lifespan, stateless_http=True)
 main_mcp.mount("jira", jira_mcp)
 main_mcp.mount("confluence", confluence_mcp)
 
 
-@main_mcp.custom_route("/healthz", methods=["GET"], include_in_schema=False)
+@main_mcp.custom_route("/health", methods=["GET"], include_in_schema=False)
 async def _health_check_route(request: Request) -> JSONResponse:
     return await health_check(request)
 
 
-logger.info("Added /healthz endpoint for Kubernetes probes")
+logger.info("Added /health endpoint for Kubernetes probes")

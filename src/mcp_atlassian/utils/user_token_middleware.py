@@ -31,13 +31,17 @@ class UserTokenMiddleware(BaseHTTPMiddleware):
         )
 
         request_path = request.url.path.rstrip("/")
-        if request.url.path == "/healthz":
+        if request.url.path == "/health":
             return await call_next(request)
 
-        if request.method == "POST" or request.method == "GET":
-            auth_header = request.headers.get("Authorization")
-            cloud_id_header = request.headers.get("X-Atlassian-Cloud-Id")
+        
 
+        if request.method == "POST" or request.method == "GET":
+
+            
+            auth_header = request.headers.get("authorization")
+            cloud_id_header = request.headers.get("X-Atlassian-Cloud-Id")
+            print(f"auth_header: {auth_header}")
             if not auth_header:
                 logger.debug(
                 f"UserTokenMiddleware: Path='{request.url.path}', no auth header provided"
