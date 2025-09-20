@@ -16,8 +16,7 @@ from mcp_atlassian.utils.decorators import (
 logger = logging.getLogger(__name__)
 
 confluence_mcp = FastMCP(
-    name="Confluence MCP Service",
-    description="Provides tools for interacting with Atlassian Confluence.",
+    name="Confluence MCP Service"
 )
 
 
