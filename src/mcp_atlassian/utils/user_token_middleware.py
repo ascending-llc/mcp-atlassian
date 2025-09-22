@@ -91,6 +91,15 @@ class UserTokenMiddleware(BaseHTTPMiddleware):
                 # JWT verification
                 try:
                     access_token = await self.token_verifier.verify_token(token)
+                    
+                    # Check if token verification failed (returns None for expired/invalid tokens)
+                    if access_token is None:
+                        logger.warning("Token verification failed: token is invalid or expired")
+                        return JSONResponse(
+                            {"error": "Unauthorized: Invalid or expired token"},
+                            status_code=401,
+                        )
+                    
                     request.state.user_atlassian_token = token
                     request.state.user_atlassian_auth_type = "oauth"
                     request.state.user_atlassian_email = access_token.claims.get("email") if access_token else None
