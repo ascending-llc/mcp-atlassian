@@ -97,7 +97,7 @@ jobs:
 
       - name: Update deployment on EKS
         env:
-          image: ${{ steps.login-ecr.outputs.registry }}/jarvis/atlassian-mcp:latest
+          image: ${{ steps.login-ecr.outputs.registry }}/jarvis/atlassian_mcp_server:latest
         run: kubectl set image deploy/atlassian-mcp atlassian-mcp=$image -n ${{ inputs.application }}
 
 
