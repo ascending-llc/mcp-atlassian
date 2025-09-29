@@ -314,7 +314,7 @@ def main(
 
     if final_transport == "stdio":
         logger.info("Starting server with STDIO transport.")
-    elif final_transport in ["sse", "streamable-http"]:
+    elif final_transport in ["sse", "streamable-http", "http"]:
         run_kwargs["host"] = final_host
         run_kwargs["port"] = final_port
         run_kwargs["log_level"] = logging.getLevelName(current_logging_level).lower()

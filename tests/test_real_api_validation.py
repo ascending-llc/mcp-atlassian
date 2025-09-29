@@ -112,13 +112,79 @@ class ResourceTracker:
 @pytest.fixture
 def jira_config() -> JiraConfig:
     """Create a JiraConfig from environment variables."""
-    return JiraConfig.from_env()
+    # Check if we have the minimum required environment variables
+    jira_url = os.environ.get("JIRA_URL")
+    if not jira_url:
+        pytest.skip("JIRA_URL environment variable not set - skipping real API tests")
+
+    # Check for authentication configuration
+    has_basic_auth = os.environ.get("JIRA_USERNAME") and os.environ.get(
+        "JIRA_API_TOKEN"
+    )
+    has_pat = os.environ.get("JIRA_PERSONAL_TOKEN")
+    has_oauth_enable = os.environ.get("ATLASSIAN_OAUTH_ENABLE", "").lower() in (
+        "true",
+        "1",
+        "yes",
+    )
+    has_full_oauth = all(
+        [
+            os.environ.get("ATLASSIAN_OAUTH_CLIENT_ID"),
+            os.environ.get("ATLASSIAN_OAUTH_CLIENT_SECRET"),
+            os.environ.get("ATLASSIAN_OAUTH_REDIRECT_URI"),
+            os.environ.get("ATLASSIAN_OAUTH_SCOPE"),
+        ]
+    )
+
+    if not (has_basic_auth or has_pat or has_oauth_enable or has_full_oauth):
+        pytest.skip(
+            "No valid Jira authentication configuration found - skipping real API tests"
+        )
+
+    try:
+        return JiraConfig.from_env()
+    except Exception as e:
+        pytest.skip(f"Failed to create JiraConfig: {e}")
 
 
 @pytest.fixture
 def confluence_config() -> ConfluenceConfig:
     """Create a ConfluenceConfig from environment variables."""
-    return ConfluenceConfig.from_env()
+    # Check if we have the minimum required environment variables
+    confluence_url = os.environ.get("CONFLUENCE_URL")
+    if not confluence_url:
+        pytest.skip(
+            "CONFLUENCE_URL environment variable not set - skipping real API tests"
+        )
+
+    # Check for authentication configuration
+    has_basic_auth = os.environ.get("CONFLUENCE_USERNAME") and os.environ.get(
+        "CONFLUENCE_API_TOKEN"
+    )
+    has_pat = os.environ.get("CONFLUENCE_PERSONAL_TOKEN")
+    has_oauth_enable = os.environ.get("ATLASSIAN_OAUTH_ENABLE", "").lower() in (
+        "true",
+        "1",
+        "yes",
+    )
+    has_full_oauth = all(
+        [
+            os.environ.get("ATLASSIAN_OAUTH_CLIENT_ID"),
+            os.environ.get("ATLASSIAN_OAUTH_CLIENT_SECRET"),
+            os.environ.get("ATLASSIAN_OAUTH_REDIRECT_URI"),
+            os.environ.get("ATLASSIAN_OAUTH_SCOPE"),
+        ]
+    )
+
+    if not (has_basic_auth or has_pat or has_oauth_enable or has_full_oauth):
+        pytest.skip(
+            "No valid Confluence authentication configuration found - skipping real API tests"
+        )
+
+    try:
+        return ConfluenceConfig.from_env()
+    except Exception as e:
+        pytest.skip(f"Failed to create ConfluenceConfig: {e}")
 
 
 @pytest.fixture

@@ -9,6 +9,9 @@ from starlette.responses import JSONResponse
 
 from mcp_atlassian.servers.main import UserTokenMiddleware, main_mcp
 
+# Only use asyncio backend for anyio tests
+pytestmark = pytest.mark.anyio(backends=["asyncio"])
+
 
 @pytest.mark.anyio
 async def test_run_server_stdio():
@@ -62,7 +65,7 @@ async def test_health_check_endpoint():
     app = main_mcp.sse_app()
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/healthz")
+        response = await client.get("/health")
 
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
@@ -70,22 +73,22 @@ async def test_health_check_endpoint():
 
 @pytest.mark.anyio
 async def test_sse_app_health_check_endpoint():
-    """Test the /healthz endpoint on the SSE app returns 200 and correct JSON response."""
+    """Test the /health endpoint on the SSE app returns 200 and correct JSON response."""
     app = main_mcp.sse_app()
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/healthz")
+        response = await client.get("/health")
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
 
 
 @pytest.mark.anyio
 async def test_streamable_http_app_health_check_endpoint():
-    """Test the /healthz endpoint on the Streamable HTTP app returns 200 and correct JSON response."""
+    """Test the /health endpoint on the Streamable HTTP app returns 200 and correct JSON response."""
     app = main_mcp.streamable_http_app()
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/healthz")
+        response = await client.get("/health")
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
 
@@ -100,10 +103,12 @@ class TestUserTokenMiddleware:
         # Create a mock MCP server to avoid warnings
         mock_mcp_server = MagicMock()
         # mock_mcp_server.settings.streamable_http_path = "/mcp"
-        return UserTokenMiddleware(mock_app,
+        return UserTokenMiddleware(
+            mock_app,
             jwks_uri="https://example.com/.well-known/jwks.json",
             issuer="https://example.com",
-            audience="test-audience")
+            audience="test-audience",
+        )
 
     @pytest.fixture
     def mock_request(self):
@@ -111,11 +116,23 @@ class TestUserTokenMiddleware:
         request = MagicMock(spec=Request)
         request.url.path = "/mcp"
         request.method = "POST"
-        request.headers = {}
+
+        # Create a mock headers object that behaves like a dict with get() method
+        mock_headers = MagicMock()
+        mock_headers.__getitem__ = lambda self, key: {}
+        mock_headers.get = lambda key, default=None: None
+        request.headers = mock_headers
+
         # Create a real state object that can be modified
         from types import SimpleNamespace
 
         request.state = SimpleNamespace()
+
+        # Mock the body() method to return an async mock that returns empty JSON
+        async def mock_body():
+            return b"{}"
+
+        request.body = AsyncMock(side_effect=mock_body)
         return request
 
     @pytest.fixture
@@ -130,11 +147,27 @@ class TestUserTokenMiddleware:
         self, middleware, mock_request, mock_call_next
     ):
         """Test successful cloud ID header extraction."""
+
         # Setup request with cloud ID header
-        mock_request.headers = {
-            "Authorization": "Bearer test-token",
-            "X-Atlassian-Cloud-Id": "test-cloud-id-123",
-        }
+        def mock_headers_get(key, default=None):
+            headers = {
+                "authorization": "Bearer test-token",
+                "x-atlassian-cloud-id": "test-cloud-id-123",
+            }
+            return headers.get(key.lower(), default)
+
+        mock_request.headers.get = mock_headers_get
+        mock_request.url.path = "/mcp"  # Make sure it's an MCP path
+        mock_request.method = "POST"  # Make sure it's a POST
+
+        # Mock the JWT verifier to return a successful verification
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_access_token = MagicMock()
+        mock_access_token.claims = {"email": "test@example.com"}
+        middleware.token_verifier.verify_token = AsyncMock(
+            return_value=mock_access_token
+        )
 
         result = await middleware.dispatch(mock_request, mock_call_next)
 

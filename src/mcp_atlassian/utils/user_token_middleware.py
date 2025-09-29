@@ -1,10 +1,13 @@
+import json
 import logging
-from typing import Any, Optional
+from typing import Any
+
+from fastmcp.server.auth.providers.jwt import JWTVerifier
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import JSONResponse
+
 from mcp_atlassian.utils.logging import mask_sensitive
-from fastmcp.server.auth.providers.jwt import JWTVerifier
 
 logger = logging.getLogger("mcp-atlassian.user_token_middleware")
 
@@ -13,7 +16,13 @@ class UserTokenMiddleware(BaseHTTPMiddleware):
     """Middleware to extract Atlassian user tokens/credentials from Authorization headers and verify JWT."""
 
     def __init__(
-        self, app: Any, *, jwks_uri: str, issuer: str, audience: str, algorithm: str = "RS256"
+        self,
+        app: Any,
+        *,
+        jwks_uri: str,
+        issuer: str,
+        audience: str,
+        algorithm: str = "RS256",
     ) -> None:
         super().__init__(app)
         self.token_verifier = JWTVerifier(
@@ -29,27 +38,64 @@ class UserTokenMiddleware(BaseHTTPMiddleware):
         logger.debug(
             f"UserTokenMiddleware.dispatch: ENTERED for request path='{request.url.path}', method='{request.method}'"
         )
+        request_path = request.url.path
+        logger.info(f"JWT Auth Middleware processing path: {request_path}")
 
-        request_path = request.url.path.rstrip("/")
         if request.url.path == "/health":
             return await call_next(request)
 
-        
-
-        if request.method == "POST" or request.method == "GET":
-
-            
+        if request.method == "POST" or request.method == "HEAD":
             auth_header = request.headers.get("authorization")
             cloud_id_header = request.headers.get("X-Atlassian-Cloud-Id")
-            print(f"auth_header: {auth_header}")
+            # Log everything from the request
+            logger.debug(
+                f"UserTokenMiddleware: Full request - Method: {request.method}, URL: {request.url}"
+            )
+            logger.debug(
+                f"UserTokenMiddleware: Request headers: {dict(request.headers)}"
+            )
+            try:
+                body = await request.body()
+                logger.debug(f"UserTokenMiddleware: Request body: {body!r}")
+                request._body = body  # Reset body for downstream handlers
+
+                # Check if this is an MCP protocol method that doesn't need auth
+                if body:
+                    try:
+                        request_data = json.loads(body.decode())
+                        method = request_data.get("method")
+                        if method in [
+                            "ping",
+                            "tools/list",
+                            "prompts/list",
+                            "resources/list",
+                        ]:
+                            logger.debug(
+                                f"UserTokenMiddleware: Allowing MCP protocol method '{method}' without auth"
+                            )
+                            response = await call_next(request)
+                            logger.debug(
+                                f"UserTokenMiddleware.dispatch: EXITED for MCP method '{method}'"
+                            )
+                            return response
+                    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                        logger.debug(
+                            f"UserTokenMiddleware: Could not parse request body as JSON: {e}"
+                        )
+
+            except Exception as e:
+                logger.warning(f"UserTokenMiddleware: Failed to read request body: {e}")
             if not auth_header:
                 logger.debug(
-                f"UserTokenMiddleware: Path='{request.url.path}', no auth header provided"
+                    f"UserTokenMiddleware: Path='{request.url.path}', no auth header provided"
                 )
                 return JSONResponse(
-                        {"error": "Unauthorized: Empty Authorization Header"},
-                        status_code=401,
-                    )
+                    content={
+                        "error": "Unauthorized: Empty Authorization Header",
+                        "code": 401,
+                    },
+                    status_code=401,
+                )
 
             token_for_log = mask_sensitive(
                 auth_header.split(" ", 1)[1].strip()
@@ -91,18 +137,22 @@ class UserTokenMiddleware(BaseHTTPMiddleware):
                 # JWT verification
                 try:
                     access_token = await self.token_verifier.verify_token(token)
-                    
+
                     # Check if token verification failed (returns None for expired/invalid tokens)
                     if access_token is None:
-                        logger.warning("Token verification failed: token is invalid or expired")
+                        logger.warning(
+                            "Token verification failed: token is invalid or expired"
+                        )
                         return JSONResponse(
                             {"error": "Unauthorized: Invalid or expired token"},
                             status_code=401,
                         )
-                    
+
                     request.state.user_atlassian_token = token
                     request.state.user_atlassian_auth_type = "oauth"
-                    request.state.user_atlassian_email = access_token.claims.get("email") if access_token else None
+                    request.state.user_atlassian_email = (
+                        access_token.claims.get("email") if access_token else None
+                    )
                     logger.debug(
                         f"UserTokenMiddleware.dispatch: JWT verified, email={getattr(request.state, 'user_atlassian_email', None)}"
                     )

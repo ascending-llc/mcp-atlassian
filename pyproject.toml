@@ -10,7 +10,7 @@ dependencies = [
     "beautifulsoup4>=4.12.3",
     "httpx>=0.28.0",
     "mcp>=1.8.0,<2.0.0",
-    "fastmcp>=2.12.3",
+    "fastmcp==2.12.3",
     "python-dotenv>=1.0.1",
     "markdownify>=0.11.6",
     "markdown>=3.7.0",
@@ -19,13 +19,14 @@ dependencies = [
     "trio>=0.29.0",
     "click>=8.1.7",
     "uvicorn>=0.27.1",
-    "starlette>=0.37.1",
+    "starlette>=0.48.0",
     "thefuzz>=0.22.1",
     "python-dateutil>=2.9.0.post0",
     "types-python-dateutil>=2.9.0.20241206",
     "keyring>=25.6.0",
     "cachetools>=5.0.0",
     "types-cachetools>=5.5.0.20240820",
+    "pytest-trio>=0.8.0",
 ]
 [[project.authors]]
 name = "sooperset"
@@ -142,3 +143,7 @@ vcs = "git"
 style = "pep440"
 bump = true
 fallback-version = "0.0.0"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

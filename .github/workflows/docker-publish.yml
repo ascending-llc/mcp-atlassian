@@ -16,7 +16,7 @@ on:
 permissions:
   id-token: write
   contents: write  # Added for Git tagging
-  
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
