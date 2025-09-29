@@ -35,11 +35,8 @@ jobs:
       - name: Set IAM role to assume
         id: set-role
         run: |
-          if [[ "${{ inputs.application }}" == "askcto" ]]; then
-            echo "role=${{ secrets.ASC_AWS_DEPLOY_ROLE_ARN }}" >> $GITHUB_OUTPUT
-          else
-            echo "role=${{ secrets.SAAS_AWS_DEPLOY_ROLE_ARN }}" >> $GITHUB_OUTPUT
-          fi
+          echo "role=${{ secrets.SAAS_AWS_DEPLOY_ROLE_ARN }}" >> $GITHUB_OUTPUT
+
 
       - name: Assume IAM role
         uses: aws-actions/configure-aws-credentials@v4
@@ -57,7 +54,6 @@ jobs:
     needs: build_and_test
     env:
       SAAS_EKS_CLUSTER_NAME: ascending-s-api-cluster
-      ASKCTO_EKS_CLUSTER_NAME: ascending-askcto-cluster
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -70,11 +66,8 @@ jobs:
       - name: Set IAM role to assume
         id: set-role
         run: |
-          if [[ "${{ inputs.application }}" == "askcto" ]]; then
-            echo "role=${{ secrets.ASC_AWS_DEPLOY_ROLE_ARN }}" >> $GITHUB_OUTPUT
-          else
-            echo "role=${{ secrets.SAAS_AWS_DEPLOY_ROLE_ARN }}" >> $GITHUB_OUTPUT
-          fi
+          echo "role=${{ secrets.SAAS_AWS_DEPLOY_ROLE_ARN }}" >> $GITHUB_OUTPUT
+
 
       - name: Assume IAM role
         uses: aws-actions/configure-aws-credentials@v4
@@ -91,11 +84,8 @@ jobs:
 
       - name: Update kubeconfig
         run: |
-          if [[ "${{ inputs.application }}" == "askcto" ]]; then
-            aws eks update-kubeconfig --name ${{ env.ASKCTO_EKS_CLUSTER_NAME }} --region ${{ inputs.region }}
-          else
-            aws eks update-kubeconfig --name ${{ env.SAAS_EKS_CLUSTER_NAME }} --region ${{ inputs.region }}
-          fi
+          aws eks update-kubeconfig --name ${{ env.SAAS_EKS_CLUSTER_NAME }} --region ${{ inputs.region }}
+
 
       - name: Sync librechat env variables
         env:
@@ -107,14 +97,14 @@ jobs:
 
       - name: Update deployment on EKS
         env:
-          image: ${{ steps.login-ecr.outputs.registry }}/jarvis/atlassian_mcp_server:latest
-        run: kubectl set image deploy/atlassian_mcp_server atlassian_mcp_server=$image -n ${{ inputs.application }}
+          image: ${{ steps.login-ecr.outputs.registry }}/jarvis/atlassian-mcp:latest
+        run: kubectl set image deploy/atlassian-mcp atlassian-mcp=$image -n ${{ inputs.application }}
 
 
       - name: restart pods
         run: |
-          kubectl rollout restart deploy/atlassian_mcp_server -n ${{ inputs.application }}
+          kubectl rollout restart deploy/atlassian-mcp -n ${{ inputs.application }}
 
       - name: Check pod status
         run: |
-          kubectl rollout status deploy/atlassian_mcp_server -n ${{ inputs.application }}
+          kubectl rollout status deploy/atlassian-mcp -n ${{ inputs.application }}
