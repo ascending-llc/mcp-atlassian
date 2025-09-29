@@ -108,13 +108,13 @@ jobs:
       - name: Update deployment on EKS
         env:
           image: ${{ steps.login-ecr.outputs.registry }}/jarvis/atlassian_mcp_server:latest
-        run: kubectl set image deploy/atlassian_mcp_server atlassian_mcp_server=$image -n ${{ inputs.application  }}
+        run: kubectl set image deploy/atlassian_mcp_server atlassian_mcp_server=$image -n ${{ inputs.application }}
 
 
       - name: restart pods
         run: |
-          kubectl rollout restart deploy/atlassian_mcp_server -n ${{ inputs.application  }}
+          kubectl rollout restart deploy/atlassian_mcp_server -n ${{ inputs.application }}
 
       - name: Check pod status
         run: |
-          kubectl rollout status deploy/atlassian_mcp_server -n ${{ inputs.application  }}
+          kubectl rollout status deploy/atlassian_mcp_server -n ${{ inputs.application }}
