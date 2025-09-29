@@ -41,6 +41,9 @@ class UserTokenMiddleware(BaseHTTPMiddleware):
         request_path = request.url.path
         logger.info(f"JWT Auth Middleware processing path: {request_path}")
 
+        if request.url.path == "/health":
+            return await call_next(request)
+
         if request.method == "POST" or request.method == "HEAD":
             auth_header = request.headers.get("authorization")
             cloud_id_header = request.headers.get("X-Atlassian-Cloud-Id")
