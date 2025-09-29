@@ -12,9 +12,6 @@ from fastmcp.client import FastMCPTransport
 from fastmcp.exceptions import ToolError
 from starlette.requests import Request
 
-# Only use asyncio backend for anyio tests
-pytestmark = pytest.mark.anyio(backends=["asyncio"])
-
 from src.mcp_atlassian.jira import JiraFetcher
 from src.mcp_atlassian.jira.config import JiraConfig
 from src.mcp_atlassian.servers.context import MainAppContext
@@ -25,6 +22,9 @@ from tests.fixtures.jira_mocks import (
     MOCK_JIRA_ISSUE_RESPONSE_SIMPLIFIED,
     MOCK_JIRA_JQL_RESPONSE_SIMPLIFIED,
 )
+
+# Only use asyncio backend for anyio tests
+pytestmark = pytest.mark.anyio(backends=["asyncio"])
 
 logger = logging.getLogger(__name__)
 
@@ -273,9 +273,7 @@ def test_jira_mcp(mock_jira_fetcher, mock_base_jira_config):
         finally:
             pass
 
-    test_mcp = AtlassianMCP(
-        name="TestJira", lifespan=test_lifespan
-    )
+    test_mcp = AtlassianMCP(name="TestJira", lifespan=test_lifespan)
     from src.mcp_atlassian.servers.jira import (
         add_comment,
         add_worklog,

@@ -1,19 +1,17 @@
 """Main FastMCP server setup for Atlassian integration."""
 
 import logging
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-import os
-from typing import Any, Literal, Optional
+from typing import Literal
 
 from cachetools import TTLCache
 from fastmcp import FastMCP
 from fastmcp.server.http import StarletteWithLifespan
 from fastmcp.tools import Tool as FastMCPTool
 from mcp.types import Tool as MCPTool
-from starlette.applications import Starlette
 from starlette.middleware import Middleware
-from starlette.middleware.base import RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -24,7 +22,6 @@ from mcp_atlassian.jira.config import JiraConfig
 from mcp_atlassian.utils.environment import get_available_services
 from mcp_atlassian.utils.io import is_read_only_mode
 from mcp_atlassian.utils.tools import get_enabled_tools, should_include_tool
-
 from mcp_atlassian.utils.user_token_middleware import UserTokenMiddleware
 
 from .confluence import confluence_mcp
@@ -109,10 +106,13 @@ async def main_lifespan(app: FastMCP[MainAppContext]) -> AsyncIterator[dict]:
 
 class AtlassianMCP(FastMCP[MainAppContext]):
     """Custom FastMCP server class for Atlassian integration with tool filtering."""
+
     jwks_uri: str = "https://auth.atlassian.com/.well-known/jwks.json"
     issuer: str = "https://auth.atlassian.com"
-    audience: str = os.getenv("ATLASSIAN_CLIENT_ID")  # Replace with your actual client ID
-    
+    audience: str = os.getenv(
+        "ATLASSIAN_CLIENT_ID"
+    )  # Replace with your actual client ID
+
     async def _mcp_list_tools(self) -> list[MCPTool]:
         # Filter tools based on enabled_tools, read_only mode, and service configuration from the lifespan context.
         req_context = self._mcp_server.request_context
@@ -199,12 +199,20 @@ class AtlassianMCP(FastMCP[MainAppContext]):
         transport: Literal["streamable-http", "sse", "http"] = "streamable-http",
         stateless_http: bool = False,
     ) -> StarletteWithLifespan:
-        user_token_mw = Middleware(UserTokenMiddleware,  jwks_uri=self.jwks_uri, issuer=self.issuer, audience=self.audience)
+        user_token_mw = Middleware(
+            UserTokenMiddleware,
+            jwks_uri=self.jwks_uri,
+            issuer=self.issuer,
+            audience=self.audience,
+        )
         final_middleware_list = [user_token_mw]
         if middleware:
             final_middleware_list.extend(middleware)
         app = super().http_app(
-            path=path, middleware=final_middleware_list, transport=transport, stateless_http=stateless_http
+            path=path,
+            middleware=final_middleware_list,
+            transport=transport,
+            stateless_http=stateless_http,
         )
         return app
 
@@ -214,10 +222,9 @@ token_validation_cache: TTLCache[
 ] = TTLCache(maxsize=100, ttl=300)
 
 
-
-
-
-main_mcp = AtlassianMCP(name="Atlassian MCP", lifespan=main_lifespan, stateless_http=False)
+main_mcp = AtlassianMCP(
+    name="Atlassian MCP", lifespan=main_lifespan, stateless_http=False
+)
 main_mcp.mount("jira", jira_mcp)
 main_mcp.mount("confluence", confluence_mcp)
 

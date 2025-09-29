@@ -1,4 +1,4 @@
-name: Deployment Pipeline
+name: Deploy MCP to EKS
 on:
   workflow_dispatch:
     inputs:
@@ -17,7 +17,7 @@ on:
           - jarvis-demo
 
 permissions:
-  id-token: write 
+  id-token: write
   contents: read
 jobs:
   build_and_test:
@@ -47,7 +47,7 @@ jobs:
           role-to-assume: ${{ steps.set-role.outputs.role }}
           role-session-name: deployment-role-session
           aws-region: ${{ inputs.region }}
-      
+
       - name: Test AWS Connection
         run: aws sts get-caller-identity
 
@@ -82,7 +82,7 @@ jobs:
           role-to-assume: ${{ steps.set-role.outputs.role }}
           role-session-name: deployment-role-session
           aws-region: ${{ inputs.region }}
-      
+
       - name: AWS ECR HELM Connection
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
@@ -96,7 +96,7 @@ jobs:
           else
             aws eks update-kubeconfig --name ${{ env.SAAS_EKS_CLUSTER_NAME }} --region ${{ inputs.region }}
           fi
-            
+
       - name: Sync librechat env variables
         env:
           AWS_REGION: ${{ inputs.region }}

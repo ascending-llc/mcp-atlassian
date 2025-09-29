@@ -103,10 +103,12 @@ class TestUserTokenMiddleware:
         # Create a mock MCP server to avoid warnings
         mock_mcp_server = MagicMock()
         # mock_mcp_server.settings.streamable_http_path = "/mcp"
-        return UserTokenMiddleware(mock_app,
+        return UserTokenMiddleware(
+            mock_app,
             jwks_uri="https://example.com/.well-known/jwks.json",
             issuer="https://example.com",
-            audience="test-audience")
+            audience="test-audience",
+        )
 
     @pytest.fixture
     def mock_request(self):
@@ -114,20 +116,22 @@ class TestUserTokenMiddleware:
         request = MagicMock(spec=Request)
         request.url.path = "/mcp"
         request.method = "POST"
-        
+
         # Create a mock headers object that behaves like a dict with get() method
         mock_headers = MagicMock()
         mock_headers.__getitem__ = lambda self, key: {}
         mock_headers.get = lambda key, default=None: None
         request.headers = mock_headers
-        
+
         # Create a real state object that can be modified
         from types import SimpleNamespace
+
         request.state = SimpleNamespace()
-        
+
         # Mock the body() method to return an async mock that returns empty JSON
         async def mock_body():
             return b"{}"
+
         request.body = AsyncMock(side_effect=mock_body)
         return request
 
@@ -143,6 +147,7 @@ class TestUserTokenMiddleware:
         self, middleware, mock_request, mock_call_next
     ):
         """Test successful cloud ID header extraction."""
+
         # Setup request with cloud ID header
         def mock_headers_get(key, default=None):
             headers = {
@@ -150,16 +155,19 @@ class TestUserTokenMiddleware:
                 "x-atlassian-cloud-id": "test-cloud-id-123",
             }
             return headers.get(key.lower(), default)
-        
+
         mock_request.headers.get = mock_headers_get
         mock_request.url.path = "/mcp"  # Make sure it's an MCP path
-        mock_request.method = "POST"    # Make sure it's a POST
+        mock_request.method = "POST"  # Make sure it's a POST
 
         # Mock the JWT verifier to return a successful verification
         from unittest.mock import AsyncMock, MagicMock
+
         mock_access_token = MagicMock()
         mock_access_token.claims = {"email": "test@example.com"}
-        middleware.token_verifier.verify_token = AsyncMock(return_value=mock_access_token)
+        middleware.token_verifier.verify_token = AsyncMock(
+            return_value=mock_access_token
+        )
 
         result = await middleware.dispatch(mock_request, mock_call_next)
 

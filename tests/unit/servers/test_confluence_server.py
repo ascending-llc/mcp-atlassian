@@ -11,15 +11,15 @@ from fastmcp import Client, FastMCP
 from fastmcp.client import FastMCPTransport
 from starlette.requests import Request
 
-# Only use asyncio backend for anyio tests
-pytestmark = pytest.mark.anyio(backends=["asyncio"])
-
 from src.mcp_atlassian.confluence import ConfluenceFetcher
 from src.mcp_atlassian.confluence.config import ConfluenceConfig
 from src.mcp_atlassian.models.confluence.page import ConfluencePage
 from src.mcp_atlassian.servers.context import MainAppContext
 from src.mcp_atlassian.servers.main import AtlassianMCP
 from src.mcp_atlassian.utils.oauth import OAuthConfig
+
+# Only use asyncio backend for anyio tests
+pytestmark = pytest.mark.anyio(backends=["asyncio"])
 
 logger = logging.getLogger(__name__)
 
