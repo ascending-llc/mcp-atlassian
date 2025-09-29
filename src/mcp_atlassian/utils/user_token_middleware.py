@@ -5,6 +5,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from mcp_atlassian.utils.logging import mask_sensitive
 from fastmcp.server.auth.providers.jwt import JWTVerifier
+import json
 
 logger = logging.getLogger("mcp-atlassian.user_token_middleware")
 
@@ -22,6 +23,18 @@ class UserTokenMiddleware(BaseHTTPMiddleware):
             audience=audience,
             algorithm=algorithm,
         )
+    
+        self.excluded_paths = [
+            "/health",
+            "initialize",
+            "list_tools",
+            "list_resources",
+            "list_prompts",
+            "/api/query",
+            "/api/embed",
+            "/api/database/query",
+            "/api/documents",
+        ]
 
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
@@ -29,25 +42,43 @@ class UserTokenMiddleware(BaseHTTPMiddleware):
         logger.debug(
             f"UserTokenMiddleware.dispatch: ENTERED for request path='{request.url.path}', method='{request.method}'"
         )
-
-        request_path = request.url.path.rstrip("/")
-        if request.url.path == "/health":
-            return await call_next(request)
+        request_path = request.url.path
+        logger.info(f"JWT Auth Middleware processing path: {request_path}")
 
         
-
-        if request.method == "POST" or request.method == "GET":
-
-            
+        if request.method == "POST" or request.method == "HEAD":
             auth_header = request.headers.get("authorization")
             cloud_id_header = request.headers.get("X-Atlassian-Cloud-Id")
-            print(f"auth_header: {auth_header}")
+            # Log everything from the request
+            logger.debug(f"UserTokenMiddleware: Full request - Method: {request.method}, URL: {request.url}")
+            logger.debug(f"UserTokenMiddleware: Request headers: {dict(request.headers)}")
+            try:
+                body = await request.body()
+                logger.debug(f"UserTokenMiddleware: Request body: {body!r}")
+                request._body = body  # Reset body for downstream handlers
+                
+                # Check if this is an MCP protocol method that doesn't need auth
+                if body:
+                    try:
+                        request_data = json.loads(body.decode())
+                        method = request_data.get("method")
+                        if method in ["ping", "tools/list", "prompts/list", "resources/list", ]:
+                            logger.debug(f"UserTokenMiddleware: Allowing MCP protocol method '{method}' without auth")
+                            response = await call_next(request)
+                            logger.debug(f"UserTokenMiddleware.dispatch: EXITED for MCP method '{method}'")
+                            return response
+                    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                        logger.debug(f"UserTokenMiddleware: Could not parse request body as JSON: {e}")
+                        
+            except Exception as e:
+                logger.warning(f"UserTokenMiddleware: Failed to read request body: {e}")
             if not auth_header:
                 logger.debug(
                 f"UserTokenMiddleware: Path='{request.url.path}', no auth header provided"
                 )
                 return JSONResponse(
-                        {"error": "Unauthorized: Empty Authorization Header"},
+                        content={"error": "Unauthorized: Empty Authorization Header",
+                                 "code": 401},
                         status_code=401,
                     )
 

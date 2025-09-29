@@ -235,11 +235,11 @@ def main(
     final_transport = os.getenv("TRANSPORT", "stdio").lower()
     if click_ctx and was_option_provided(click_ctx, "transport"):
         final_transport = transport
-    if final_transport not in ["stdio", "sse", "streamable-http"]:
-        logger.warning(
-            f"Invalid transport '{final_transport}' from env/default, using 'stdio'."
-        )
-        final_transport = "stdio"
+    # if final_transport not in ["stdio", "sse", "streamable-http"]:
+    #     logger.warning(
+    #         f"Invalid transport '{final_transport}' from env/default, using 'stdio'."
+    #     )
+    #     final_transport = "stdio"
     logger.debug(f"Final transport determined: {final_transport}")
 
     # Port precedence
@@ -309,12 +309,12 @@ def main(
     from mcp_atlassian.servers import main_mcp
 
     run_kwargs = {
-        "transport": final_transport,
+        "transport": 'http',
     }
 
     if final_transport == "stdio":
         logger.info("Starting server with STDIO transport.")
-    elif final_transport in ["sse", "streamable-http"]:
+    elif final_transport in ["sse", "streamable-http", 'http']:
         run_kwargs["host"] = final_host
         run_kwargs["port"] = final_port
         run_kwargs["log_level"] = logging.getLevelName(current_logging_level).lower()

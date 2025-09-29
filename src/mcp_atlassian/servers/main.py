@@ -8,6 +8,7 @@ from typing import Any, Literal, Optional
 
 from cachetools import TTLCache
 from fastmcp import FastMCP
+from fastmcp.server.http import StarletteWithLifespan
 from fastmcp.tools import Tool as FastMCPTool
 from mcp.types import Tool as MCPTool
 from starlette.applications import Starlette
@@ -34,6 +35,7 @@ logger = logging.getLogger("mcp-atlassian.server.main")
 
 
 async def health_check(request: Request) -> JSONResponse:
+    logger.debug("Health check endpoint called.")
     return JSONResponse({"status": "ok"})
 
 
@@ -194,9 +196,9 @@ class AtlassianMCP(FastMCP[MainAppContext]):
         self,
         path: str | None = None,
         middleware: list[Middleware] | None = None,
-        transport: Literal["streamable-http", "sse"] = "streamable-http",
+        transport: Literal["streamable-http", "sse", "http"] = "http",
         stateless_http: bool = False,
-    ) -> "Starlette":
+    ) -> StarletteWithLifespan:
         user_token_mw = Middleware(UserTokenMiddleware,  jwks_uri=self.jwks_uri, issuer=self.issuer, audience=self.audience)
         final_middleware_list = [user_token_mw]
         if middleware:
@@ -215,7 +217,7 @@ token_validation_cache: TTLCache[
 
 
 
-main_mcp = AtlassianMCP(name="Atlassian MCP", lifespan=main_lifespan, stateless_http=True)
+main_mcp = AtlassianMCP(name="Atlassian MCP", lifespan=main_lifespan, stateless_http=False)
 main_mcp.mount("jira", jira_mcp)
 main_mcp.mount("confluence", confluence_mcp)
 
