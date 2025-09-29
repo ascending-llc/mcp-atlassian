@@ -196,7 +196,7 @@ class AtlassianMCP(FastMCP[MainAppContext]):
         self,
         path: str | None = None,
         middleware: list[Middleware] | None = None,
-        transport: Literal["streamable-http", "sse", "http"] = "http",
+        transport: Literal["streamable-http", "sse", "http"] = "streamable-http",
         stateless_http: bool = False,
     ) -> StarletteWithLifespan:
         user_token_mw = Middleware(UserTokenMiddleware,  jwks_uri=self.jwks_uri, issuer=self.issuer, audience=self.audience)

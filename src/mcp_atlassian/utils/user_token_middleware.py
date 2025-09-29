@@ -23,18 +23,6 @@ class UserTokenMiddleware(BaseHTTPMiddleware):
             audience=audience,
             algorithm=algorithm,
         )
-    
-        self.excluded_paths = [
-            "/health",
-            "initialize",
-            "list_tools",
-            "list_resources",
-            "list_prompts",
-            "/api/query",
-            "/api/embed",
-            "/api/database/query",
-            "/api/documents",
-        ]
 
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint

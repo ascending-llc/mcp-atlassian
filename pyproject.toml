@@ -26,6 +26,7 @@ dependencies = [
     "keyring>=25.6.0",
     "cachetools>=5.0.0",
     "types-cachetools>=5.5.0.20240820",
+    "pytest-trio>=0.8.0",
 ]
 [[project.authors]]
 name = "sooperset"
@@ -142,3 +143,7 @@ vcs = "git"
 style = "pep440"
 bump = true
 fallback-version = "0.0.0"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
